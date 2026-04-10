@@ -5,29 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fotos de mi Taza</title>
     <style>
-        body { 
-            font-family: Arial; 
-            text-align: center; 
-            padding: 20px; 
-            background: #f8f8f8; 
-        }
-        h2 { color: #333; }
-        img { 
-            max-width: 100%; 
-            border-radius: 12px; 
-            margin: 15px 0; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
+        body { font-family: Arial; text-align: center; padding: 20px; background: #f0f0f0; }
+        h2 { color: #222; }
+        img { max-width: 100%; border-radius: 12px; margin: 15px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         button { 
-            padding: 14px 20px; 
+            padding: 15px 20px; 
             margin: 10px; 
             font-size: 17px; 
             border: none; 
-            border-radius: 8px; 
+            border-radius: 10px; 
             background: #0066cc; 
             color: white;
         }
-        #status { margin: 15px; font-weight: bold; min-height: 24px; }
+        #status { margin: 20px; font-weight: bold; min-height: 28px; }
     </style>
 </head>
 <body>
@@ -43,8 +33,8 @@
     <script>
         const USER = "hectoradolfo";
         const REPO = "tazas-qr";
-        const TOKEN = "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";
-        const HASH = "taza001";     
+        const TOKEN = "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";  // ← Si tenés uno nuevo, pegalo acá
+        const HASH = "taza001";
 
         const filePath = `${HASH}.txt`;
         const apiUrl = `https://api.github.com/repos/${USER}/${REPO}/contents/${filePath}`;
@@ -72,58 +62,53 @@
             try {
                 let sha = null;
                 try {
-                    const resp = await fetch(apiUrl, {
-                        headers: { 'Authorization': `token ${TOKEN}` }
-                    });
-                    if (resp.ok) {
-                        const data = await resp.json();
-                        sha = data.sha;
-                    }
+                    const r = await fetch(apiUrl, { headers: { Authorization: `token ${TOKEN}` }});
+                    if (r.ok) sha = (await r.json()).sha;
                 } catch(e){}
 
                 const content = btoa(unescape(encodeURIComponent(base64)));
 
-                await fetch(apiUrl, {
+                const resp = await fetch(apiUrl, {
                     method: "PUT",
                     headers: {
                         'Authorization': `token ${TOKEN}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        message: "Nueva foto desde la taza",
+                        message: "Foto desde taza",
                         content: content,
                         sha: sha
                     })
                 });
 
-                status.textContent = "✅ ¡Foto guardada correctamente!";
-                setTimeout(() => status.textContent = "", 3000);
+                if (resp.ok) {
+                    status.textContent = "✅ Foto guardada correctamente!";
+                    setTimeout(() => status.textContent = "", 2500);
+                } else {
+                    status.textContent = "❌ Error al guardar (401?)";
+                }
             } catch(err) {
-                status.textContent = "❌ Error al subir";
+                status.textContent = "❌ Error de conexión";
                 console.error(err);
             }
         }
 
-        // Ver fotos
         async function loadPhoto() {
             const status = document.getElementById('status');
             const container = document.getElementById('photoContainer');
             container.innerHTML = "";
-            status.textContent = "Cargando...";
+            status.textContent = "Cargando foto...";
 
             try {
                 const resp = await fetch(apiUrl, {
                     headers: { 'Authorization': `token ${TOKEN}` }
                 });
 
-                if (!resp.ok) {
-                    if (resp.status === 404) {
-                        status.textContent = "Esta taza todavía no tiene fotos";
-                    } else {
-                        status.textContent = "Error al cargar";
-                    }
+                if (resp.status === 404) {
+                    status.textContent = "Esta taza todavía no tiene fotos";
                     return;
                 }
+                if (!resp.ok) throw new Error("HTTP " + resp.status);
 
                 const data = await resp.json();
                 const base64 = decodeURIComponent(escape(atob(data.content)));
@@ -134,8 +119,8 @@
 
                 status.textContent = "✅ Foto cargada";
             } catch(err) {
-                status.textContent = "❌ Error al cargar";
                 console.error(err);
+                status.textContent = "❌ Error al cargar";
             }
         }
     </script>
